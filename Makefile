@@ -5,11 +5,13 @@ all: gps-sdr-sim
 
 SHELL=/bin/bash
 CC=gcc
+
 CFLAGS=-O3 -Wall -D_FILE_OFFSET_BITS=64
 ifdef USER_MOTION_SIZE
-CFLAGS+=-DUSER_MOTION_SIZE=$(USER_MOTION_SIZE)
+	CFLAGS+=-DUSER_MOTION_SIZE=$(USER_MOTION_SIZE)
 endif
-LDFLAGS=-lm
+LDFLAGS=-lm -lpthread
+
 
 gps-sdr-sim: gpssim.o
 	${CC} $< ${LDFLAGS} -o $@
@@ -33,11 +35,3 @@ time: gps-sdr-sim
 	time ./gps-sdr-sim -e brdc3540.14n -u circle.csv -b 1
 	time ./gps-sdr-sim -e brdc3540.14n -u circle.csv -b 8
 	time ./gps-sdr-sim -e brdc3540.14n -u circle.csv -b 16
-
-.FORCE:
-
-YEAR?=$(shell date +"%Y")
-Y=$(patsubst 20%,%,$(YEAR))
-%.$(Y)n:
-	wget -q ftp://cddis.gsfc.nasa.gov/gnss/data/daily/$(YEAR)/brdc/$@.Z -O $@.Z
-	uncompress $@.Z

@@ -1,4 +1,4 @@
-# GPS-SDR-SIM
+# GPS-SDR-SIM realtime
 
 GPS-SDR-SIM generates GPS baseband signal data streams, which can be converted 
 to RF using software-defined radio (SDR) platforms, such as 
@@ -15,7 +15,7 @@ to RF using software-defined radio (SDR) platforms, such as
 ### Building with GCC
 
 ```
-$ gcc gpssim.c -lm -O3 -o gps-sdr-sim
+$ gcc gpssim.c -lm -lpthread -O3 -o gps-sdr-sim
 ```
 
 ### Using bigger user motion files
@@ -86,6 +86,8 @@ Options:
   -b <iq_bits>     I/Q data format [1/8/16] (default: 16)
   -i               Disable ionospheric delay for spacecraft scenario
   -v               Show details about simulated channels
+  -n <port>        Use TCP connection to Gnuradio TCP-Source for realtime simulation.
+  -w               Connect with map server(/mapserver/mapper.py) by udp on port 5678.
 ```
 
 The user motion can be specified in either dynamic or static mode:
@@ -100,6 +102,12 @@ The user motion can be specified in either dynamic or static mode:
 
 ```
 > gps-sdr-sim -e brdc3540.14n -l 30.286502,120.032669,100
+```
+
+Use Gnuradio to realtime simulate 3000s:
+
+```
+> gps-sdr-sim -e brdc3540.14n -l 30.286502,120.032669,100 -n 1234 -d 3000
 ```
 
 ### Transmitting the samples
@@ -166,6 +174,38 @@ Set RF bandwidth:
 > plutoplayer -t gpssim.bin -b 3.0
 ```
 Default 3.0MHz. Applicable range 1.0MHz to 5.0MHz.
+
+### Realtime by Gnuradio
+
+Use -n option can connect to a TCP source in Gnuradio for realtime simulation.
+
+The tcp source should be set in "Server" mode.
+
+See tcp.grc as an example.
+
+### Map
+
+Run gps-sdr-sim with -w option, and 
+
+cd into /mapserver, and run
+
+```
+python mapper.py
+```
+
+Then visit http://127.0.0.1:8080/static/baidumap.html to use the baidu Online map.
+
+
+
+Actually I don't want to use BaiduMap.. But because of the GFW, I can't access Google..
+
+You can write an map which can POST data to http://127.0.0.1:8080/post like this
+
+```
+lon=116&lat=39&hgt=10
+```
+
+to replace Baidumap.
 
 ### License
 
