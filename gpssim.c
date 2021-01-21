@@ -5,15 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
 #include <time.h>
+
 #ifdef _WIN32
-#include "getopt.h"
+	#include "getopt.h"
 #else
-#include <unistd.h>
+	#include <unistd.h>
 #endif
+
 #include "gpssim.h"
 #include "socket.c"
-#include <pthread.h>
 
 int sinTable512[] = {
 	   2,   5,   8,  11,  14,  17,  20,  23,  26,  29,  32,  35,  38,  41,  44,  47,
