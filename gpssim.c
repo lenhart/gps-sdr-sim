@@ -1738,11 +1738,10 @@ int main(int argc, char *argv[])
 
 	ionoutc_t ionoutc;
 	
-	
-	int usesocket=false;
-	int webflag=0;
-	int sockc=0;
-	short port=1234;
+	int usesocket = false;
+	int webflag = 0;
+	int sockc = 0;
+	int port = 1234;
 
 	////////////////////////////////////////////////////////////
 	// Read options
@@ -1854,20 +1853,18 @@ int main(int argc, char *argv[])
 		case 'v':
 			verb = true;
 			break;
-		case ':':
-		case '?':
-			usage();
-			exit(1);
 		case 'n':
 			sscanf(optarg,"%hd",&port);
-			
-			usesocket=true;
+			usesocket = true;
 			break;
 		case  'w':
 			staticLocationMode = true;
 			webflag=1;
 			break;
-			
+		case ':':
+		case '?':
+			usage();
+			exit(1);
 		default:
 			break;
 		}
@@ -1894,7 +1891,9 @@ int main(int argc, char *argv[])
 		llh[2] = 10.0;
 	}
 
-	if (duration<0.0 || (duration>((double)USER_MOTION_SIZE)/10.0 && !staticLocationMode) || (duration>STATIC_MAX_DURATION && staticLocationMode&&usesocket==false))
+	if (duration<0.0
+			|| (duration>((double)USER_MOTION_SIZE)/10.0 && !staticLocationMode)	// TODO this seems overly complicated. maybe use positive cases and switch in || cases?
+			|| ((duration>STATIC_MAX_DURATION && staticLocationMode) && !usesocket))
 	{
 		fprintf(stderr, "ERROR: Invalid duration.\n");
 		exit(1);
@@ -1990,7 +1989,7 @@ int main(int argc, char *argv[])
 	tmax.y = 0;
 	for (sv=0; sv<MAX_SAT; sv++)
 	{
-		if (eph[neph-1][sv].vflg == 1)
+		if (eph[neph-1][sv].vflg==1)
 		{
 			gmax = eph[neph-1][sv].toc;
 			tmax = eph[neph-1][sv].t;
@@ -2023,7 +2022,7 @@ int main(int argc, char *argv[])
 			{
 				for (i=0; i<neph; i++)
 				{
-					if (eph[i][sv].vflg == 1)
+					if (eph[i][sv].vflg==1)
 					{
 						gtmp = incGpsTime(eph[i][sv].toc, dsec);
 						gps2date(&gtmp,&ttmp);
@@ -2068,7 +2067,7 @@ int main(int argc, char *argv[])
 	{
 		for (sv=0; sv<MAX_SAT; sv++)
 		{
-			if (eph[i][sv].vflg == 1)
+			if (eph[i][sv].vflg==1)
 			{
 				dt = subGpsTime(g0, eph[i][sv].toc);
 				if (dt>=-SECONDS_IN_HOUR && dt<SECONDS_IN_HOUR)
@@ -2083,7 +2082,7 @@ int main(int argc, char *argv[])
 			break;
 	}
 
-	if (ieph == -1)
+	if (ieph==-1)
 	{
 		fprintf(stderr, "ERROR: No current set of ephemerides has been found.\n");
 		exit(1);
@@ -2120,7 +2119,7 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 	}
-	if(usesocket==false){
+	if(!usesocket){
 		// Open output file
 		// "-" can be used as name for stdout
 		if(strcmp("-", outfile)){
@@ -2154,6 +2153,7 @@ int main(int argc, char *argv[])
 	for(i=0; i<MAX_CHAN; i++)
 	{
 		if (chan[i].prn>0)
+			// todo print text line w/ column descriptions
 			fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn, 
 				chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
 	}
@@ -2286,34 +2286,37 @@ int main(int argc, char *argv[])
 			iq_buff[isamp*2+1] = (short)q_acc;
 		}
 
-		if (data_format==SC01&&usesocket==false)
-		{
-			for (isamp=0; isamp<2*iq_buff_size; isamp++)
+		if (!usesocket) {
+			if (data_format==SC01)
 			{
-				if (isamp%8==0)
-					iq8_buff[isamp/8] = 0x00;
+				for (isamp=0; isamp<2*iq_buff_size; isamp++)
+				{
+					if (isamp%8==0)
+						iq8_buff[isamp/8] = 0x00;
 
-				iq8_buff[isamp/8] |= (iq_buff[isamp]>0?0x01:0x00)<<(7-isamp%8);
+					iq8_buff[isamp/8] |= (iq_buff[isamp]>0?0x01:0x00)<<(7-isamp%8);
+				}
+
+				fwrite(iq8_buff, 1, iq_buff_size/4, fp);
 			}
+			else if (data_format==SC08)
+			{
+				for (isamp=0; isamp<2*iq_buff_size; isamp++)
+					iq8_buff[isamp] = iq_buff[isamp]>>4; // 12-bit bladeRF -> 8-bit HackRF
 
-			fwrite(iq8_buff, 1, iq_buff_size/4, fp);
+				fwrite(iq8_buff, 1, 2*iq_buff_size, fp);
+			}
+			else if(data_format==SC16)
+			{
+				fwrite(iq_buff, 2, 2*iq_buff_size, fp);
+			}
 		}
-		else if (data_format==SC08&&usesocket==false)
+		else
 		{
-			for (isamp=0; isamp<2*iq_buff_size; isamp++)
-				iq8_buff[isamp] = iq_buff[isamp]>>4; // 12-bit bladeRF -> 8-bit HackRF
-
-			fwrite(iq8_buff, 1, 2*iq_buff_size, fp);
-		} 
-		else if(data_format==SC16&&usesocket==false)
-		{
-			fwrite(iq_buff, 2, 2*iq_buff_size, fp);
-		}
-		if(usesocket==true){
-			float *datap=(float*)calloc(iq_buff_size*2,sizeof(float));
-			int l=0;
+			float *datap = calloc(iq_buff_size*2,sizeof(float));
+			int l = 0;
 			for(l=0;l<iq_buff_size*2;l++){
-				datap[l]=(float)iq_buff[l];
+				datap[l] = (float)iq_buff[l];
 			}
 			socksend(sockc,datap,iq_buff_size*2*sizeof(float));
 			free(datap);
@@ -2358,11 +2361,13 @@ int main(int argc, char *argv[])
 			}
 
 			// Update channel allocation
-			if (!staticLocationMode)
+			if (!staticLocationMode) {
 				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[iumd], elvmask);
+			}
 			else
+			{
 				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask);
-
+			}
 			// Show details about simulated channels
 			if (verb==true)
 			{
@@ -2375,7 +2380,7 @@ int main(int argc, char *argv[])
 				}
 			}
 		}
-		if(subGpsTime(grx, g0)-(float)(timem()-timestart)/1000>0.1&&usesocket==true){
+		if((subGpsTime(grx, g0)-(float)(timem()-timestart)/1000 > 0.1) && usesocket){
 			usleep(100000);
 		}
 		
@@ -2400,10 +2405,14 @@ int main(int argc, char *argv[])
 	// Free I/Q buffer
 	free(iq_buff);
 
-	// Close file
-	if(usesocket==false)
-	fclose(fp);
-	else sockclose(sockc);
+	// Close file or socket
+	if(usesocket) {
+		sockclose(sockc);
+	}
+	else
+	{
+		fclose(fp);
+	}
 	// Process time
 	fprintf(stderr, "Process time = %.1f [sec]\n", (double)(tend-tstart)/CLOCKS_PER_SEC);
 
