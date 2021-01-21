@@ -1680,7 +1680,7 @@ int main(int argc, char *argv[])
 {
 	clock_t tstart,tend;
 
-	FILE *fp;
+	FILE *fp = NULL;
 
 	int sv;
 	int neph,ieph;
@@ -1732,14 +1732,14 @@ int main(int argc, char *argv[])
 
 	double duration;
 	int iduration;
-	int verb;
+	bool verb;
 
-	int timeoverwrite = false; // Overwrite the TOC and TOE in the RINEX file
+	bool timeoverwrite = false; // Overwrite the TOC and TOE in the RINEX file
 
 	ionoutc_t ionoutc;
 	
-	int usesocket = false;
-	int webflag = 0;
+	bool usesocket = false;
+	bool webflag = false;
 	int sockc = 0;
 	int port = 1234;
 
@@ -1859,7 +1859,7 @@ int main(int argc, char *argv[])
 			break;
 		case  'w':
 			staticLocationMode = true;
-			webflag=1;
+			webflag = true;
 			break;
 		case ':':
 		case '?':
@@ -1869,11 +1869,11 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
-	if(webflag==1){
+	if(webflag){
 		pthread_t th;
 		pthread_create(&th,NULL,(void *)threadrecv,NULL);
 	}	
-	if(usesocket==1)
+	if(usesocket)
 		sockc=sockinit(port);
 
 	if (navfile[0]==0)
@@ -1911,7 +1911,15 @@ int main(int argc, char *argv[])
 	// Receiver position
 	////////////////////////////////////////////////////////////
 
-	if (!staticLocationMode)
+	if (staticLocationMode)
+	{
+		// Static geodetic coordinates input mode: "-l"
+		// Added by scateu@gmail.com
+		fprintf(stderr, "Using static location mode.\n");
+
+		numd = iduration;
+	}
+	else
 	{
 		// Read user motion file
 		if (nmeaGGA)
@@ -1935,14 +1943,6 @@ int main(int argc, char *argv[])
 			numd = iduration;
 		}
 	} 
-	else 
-	{ 
-		// Static geodetic coordinates input mode: "-l"
-		// Added by scateu@gmail.com 
-		fprintf(stderr, "Using static location mode.\n");
-
-		numd = iduration;
-	}
 /*
 	fprintf(stderr, "xyz = %11.1f, %11.1f, %11.1f\n", xyz[0][0], xyz[0][1], xyz[0][2]);
 	fprintf(stderr, "llh = %11.6f, %11.6f, %11.1f\n", llh[0]*R2D, llh[1]*R2D, llh[2]);
@@ -1959,7 +1959,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if ((verb==true)&&(ionoutc.vflg==true))
+	if (verb && (ionoutc.vflg==true))
 	{
 		fprintf(stderr, "  %12.3e %12.3e %12.3e %12.3e\n", 
 			ionoutc.alpha0, ionoutc.alpha1, ionoutc.alpha2, ionoutc.alpha3);
@@ -2376,16 +2376,17 @@ int main(int argc, char *argv[])
 				for (i=0; i<MAX_CHAN; i++)
 				{
 					if (chan[i].prn>0)
+						// TODO: print channel info?
 						fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn,
 							chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
 				}
 			}
 		}
 		if((subGpsTime(grx, g0)-(float)(timem()-timestart)/1000 > 0.1) && usesocket){
-			usleep(100000);
+			usleep(100000); 	//TODO: WHAT ARE WE WAITING FOR HERE?
 		}
 		
-		if(webflag==1){
+		if(webflag){
 			memcpy(llh,llhr,3*sizeof(double));
 			llh[0] = llh[0] / R2D; // convert to RAD
 			llh[1] = llh[1] / R2D; // convert to RAD
@@ -2406,11 +2407,12 @@ int main(int argc, char *argv[])
 	// Free I/Q buffer
 	free(iq_buff);
 
-	// Close file or socket
+	// Close socket
 	if(usesocket) {
 		sockclose(sockc);
 	}
-	else
+	// Close file
+	if (NULL != fp)
 	{
 		fclose(fp);
 	}
