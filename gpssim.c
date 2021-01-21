@@ -1854,7 +1854,7 @@ int main(int argc, char *argv[])
 			verb = true;
 			break;
 		case 'n':
-			sscanf(optarg,"%hd",&port);
+			sscanf(optarg,"%d",&port);
 			usesocket = true;
 			break;
 		case  'w':
@@ -1914,17 +1914,16 @@ int main(int argc, char *argv[])
 	if (!staticLocationMode)
 	{
 		// Read user motion file
-		if (nmeaGGA==true)
-			numd = readNmeaGGA(xyz, umfile);
-		else
-			numd = readUserMotion(xyz, umfile);
-
-		if (numd==-1)
+		if (nmeaGGA)
 		{
-			fprintf(stderr, "ERROR: Failed to open user motion / NMEA GGA file.\n");
-			exit(1);
+			numd = readNmeaGGA(xyz, umfile);
 		}
-		else if (numd==0)
+		else
+		{
+			numd = readUserMotion(xyz, umfile);
+		}
+
+		if (numd<=0)
 		{
 			fprintf(stderr, "ERROR: Failed to read user motion / NMEA GGA data.\n");
 			exit(1);
@@ -1932,7 +1931,9 @@ int main(int argc, char *argv[])
 
 		// Set simulation duration
 		if (numd>iduration)
+		{
 			numd = iduration;
+		}
 	} 
 	else 
 	{ 
@@ -2089,7 +2090,7 @@ int main(int argc, char *argv[])
 	}
 
 	////////////////////////////////////////////////////////////
-	// Baseband signal buffer and output file
+	// Baseband signal buffer
 	////////////////////////////////////////////////////////////
 
 	// Allocate I/Q buffer
@@ -2119,19 +2120,7 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 	}
-	if(!usesocket){
-		// Open output file
-		// "-" can be used as name for stdout
-		if(strcmp("-", outfile)){
-			if (NULL==(fp=fopen(outfile,"wb")))
-			{
-				fprintf(stderr, "ERROR: Failed to open output file.\n");
-				exit(1);
-			}
-		}else{
-			fp = stdout;
-		}
-	}
+
 	////////////////////////////////////////////////////////////
 	// Initialize channels
 	////////////////////////////////////////////////////////////
@@ -2287,6 +2276,18 @@ int main(int argc, char *argv[])
 		}
 
 		if (!usesocket) {
+			// Open output file
+			// "-" can be used as name for stdout
+			if(strcmp("-", outfile)){
+				if (NULL==(fp=fopen(outfile,"wb")))
+				{
+					fprintf(stderr, "ERROR: Failed to open output file.\n");
+					exit(1);
+				}
+			}else{
+				fp = stdout;
+			}
+
 			if (data_format==SC01)
 			{
 				for (isamp=0; isamp<2*iq_buff_size; isamp++)
