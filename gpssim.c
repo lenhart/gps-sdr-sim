@@ -1,5 +1,6 @@
 #define _CRT_SECURE_NO_DEPRECATE
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -621,7 +622,7 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_
 	sbf[2][8] = (omgdot&0xFFFFFFUL)<<6;
 	sbf[2][9] = ((iode&0xFFUL)<<22) | ((idot&0x3FFFUL)<<8);
 
-	if (ionoutc.vflg==TRUE)
+	if (ionoutc.vflg==true)
 	{
 		// Subframe 4, page 18
 		sbf[3][0] = 0x8B0000UL<<6;
@@ -930,9 +931,9 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t *ionoutc, const char *fnam
 		}
 	}
 
-	ionoutc->vflg = FALSE;
+	ionoutc->vflg = false;
 	if (flags==0xF) // Read all Iono/UTC lines
-		ionoutc->vflg = TRUE;
+		ionoutc->vflg = true;
 
 	// Read ephemeris blocks
 	g0.week = -1;
@@ -1174,7 +1175,7 @@ double ionosphericDelay(const ionoutc_t *ionoutc, gpstime_t g, double *llh, doub
 	double iono_delay = 0.0;
 	double E,phi_u,lam_u,F;
 
-	if (ionoutc->enable==FALSE)
+	if (ionoutc->enable==false)
 		return (0.0); // No ionospheric delay
 
 	E = azel[1]/PI;
@@ -1184,7 +1185,7 @@ double ionosphericDelay(const ionoutc_t *ionoutc, gpstime_t g, double *llh, doub
 	// Obliquity factor
 	F = 1.0 + 16.0*pow((0.53 - E),3.0);
 
-	if (ionoutc->vflg==FALSE)
+	if (ionoutc->vflg==false)
 		iono_delay = F*5.0e-9*SPEED_OF_LIGHT;
 	else
 	{
@@ -1704,8 +1705,8 @@ int main(int argc, char *argv[])
 	char umfile[MAX_CHAR];
 	double xyz[USER_MOTION_SIZE][3];
 
-	int staticLocationMode = FALSE;
-	int nmeaGGA = FALSE;
+	int staticLocationMode = false;
+	int nmeaGGA = false;
 
 	char navfile[MAX_CHAR];
 	char outfile[MAX_CHAR];
@@ -1731,7 +1732,7 @@ int main(int argc, char *argv[])
 	int iduration;
 	int verb;
 
-	int timeoverwrite = FALSE; // Overwrite the TOC and TOE in the RINEX file
+	int timeoverwrite = false; // Overwrite the TOC and TOE in the RINEX file
 
 	ionoutc_t ionoutc;
 	
@@ -1754,8 +1755,8 @@ int main(int argc, char *argv[])
 	g0.week = -1; // Invalid start time
 	iduration = USER_MOTION_SIZE;
 	duration = (double)iduration/10.0; // Default duration
-	verb = FALSE;
-	ionoutc.enable = TRUE;
+	verb = false;
+	ionoutc.enable = true;
 
 	if (argc<3)
 	{
@@ -1772,21 +1773,21 @@ int main(int argc, char *argv[])
 			break;
 		case 'u':
 			strcpy(umfile, optarg);
-			nmeaGGA = FALSE;
+			nmeaGGA = false;
 			break;
 		case 'g':
 			strcpy(umfile, optarg);
-			nmeaGGA = TRUE;
+			nmeaGGA = true;
 			break;
 		case 'c':
 			// Static ECEF coordinates input mode
-			staticLocationMode = TRUE;
+			staticLocationMode = true;
 			sscanf(optarg,"%lf,%lf,%lf",&xyz[0][0],&xyz[0][1],&xyz[0][2]);
 			break;
 		case 'l':
 			// Static geodetic coordinates input mode
 			// Added by scateu@gmail.com
-			staticLocationMode = TRUE;
+			staticLocationMode = true;
 			sscanf(optarg,"%lf,%lf,%lf",&llh[0],&llh[1],&llh[2]);
 			llh[0] = llh[0] / R2D; // convert to RAD
 			llh[1] = llh[1] / R2D; // convert to RAD
@@ -1812,7 +1813,7 @@ int main(int argc, char *argv[])
 			}
 			break;
 		case 'T':
-			timeoverwrite = TRUE;
+			timeoverwrite = true;
 			if (strncmp(optarg, "now", 3)==0)
 			{
 				time_t timer;
@@ -1846,10 +1847,10 @@ int main(int argc, char *argv[])
 			duration = atof(optarg);
 			break;
 		case 'i':
-			ionoutc.enable = FALSE; // Disable ionospheric correction
+			ionoutc.enable = false; // Disable ionospheric correction
 			break;
 		case 'v':
-			verb = TRUE;
+			verb = true;
 			break;
 		case ':':
 		case '?':
@@ -1861,7 +1862,7 @@ int main(int argc, char *argv[])
 			usesocket=true;
 			break;
 		case  'w':
-			staticLocationMode = TRUE;
+			staticLocationMode = true;
 			webflag=1;
 			break;
 			
@@ -1885,7 +1886,7 @@ int main(int argc, char *argv[])
 	if (umfile[0]==0 && !staticLocationMode)
 	{
 		// Default static location; Tokyo
-		staticLocationMode = TRUE;
+		staticLocationMode = true;
 		llh[0] = 35.681298 / R2D;
 		llh[1] = 139.766247 / R2D;
 		llh[2] = 10.0;
@@ -1912,7 +1913,7 @@ int main(int argc, char *argv[])
 	if (!staticLocationMode)
 	{
 		// Read user motion file
-		if (nmeaGGA==TRUE)
+		if (nmeaGGA==true)
 			numd = readNmeaGGA(xyz, umfile);
 		else
 			numd = readUserMotion(xyz, umfile);
@@ -1956,7 +1957,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if ((verb==TRUE)&&(ionoutc.vflg==TRUE))
+	if ((verb==true)&&(ionoutc.vflg==true))
 	{
 		fprintf(stderr, "  %12.3e %12.3e %12.3e %12.3e\n", 
 			ionoutc.alpha0, ionoutc.alpha1, ionoutc.alpha2, ionoutc.alpha3);
@@ -1997,7 +1998,7 @@ int main(int argc, char *argv[])
 
 	if (g0.week>=0) // Scenario start time has been set.
 	{
-		if (timeoverwrite==TRUE)
+		if (timeoverwrite==true)
 		{
 			gpstime_t gtmp;
 			datetime_t ttmp;
@@ -2013,7 +2014,7 @@ int main(int argc, char *argv[])
 			ionoutc.tot = (int)gtmp.sec;
 
 			// Iono/UTC parameters may no longer valid
-			//ionoutc.vflg = FALSE;
+			//ionoutc.vflg = false;
 
 			// Overwrite the TOC and TOE to the scenario start time
 			for (sv=0; sv<MAX_SAT; sv++)
@@ -2361,7 +2362,7 @@ int main(int argc, char *argv[])
 				allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask);
 
 			// Show details about simulated channels
-			if (verb==TRUE)
+			if (verb==true)
 			{
 				fprintf(stderr, "\n");
 				for (i=0; i<MAX_CHAN; i++)
