@@ -1669,8 +1669,8 @@ void usage(void)
 		"  -b <iq_bits>     I/Q data format [1/8/16] (default: 16)\n"
 		"  -i               Disable ionospheric delay for spacecraft scenario\n"
 		"  -v               Show details about simulated channels\n"
-		"  -n <port>        Use TCP connect to Gnuradio TCP-Source for\n realtime simulation.\n"
-		"-w               Connect with map server(/mapserver/mapper.py) by udp on port 5678.\n",
+		"  -n <port>        Use TCP connect to Gnuradio TCP-Source for realtime simulation.\n"
+		"  -w               Connect with map server(/mapserver/mapper.py) by UDP on port 5678.\n",
 		(double)((USER_MOTION_SIZE)/10.0),(int)STATIC_MAX_DURATION);
 
 	return;
@@ -1892,13 +1892,8 @@ int main(int argc, char *argv[])
 	}
 
 	if (duration<0.0
-<<<<<<< HEAD
 			|| (duration>((double)USER_MOTION_SIZE)/10.0 && !staticLocationMode)	// TODO this seems overly complicated. maybe use positive cases and switch in || cases?
 			|| ((duration>STATIC_MAX_DURATION && staticLocationMode) && !usesocket))
-=======
-			|| (duration>((double)USER_MOTION_SIZE)/10.0 && !staticLocationMode)
-			|| (duration>STATIC_MAX_DURATION && staticLocationMode))
->>>>>>> spelling2
 	{
 		fprintf(stderr, "ERROR: Invalid duration.\n");
 		exit(1);
