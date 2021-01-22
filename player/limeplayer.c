@@ -26,6 +26,16 @@
 
 static int control_c_received = 0;
 
+typedef struct {
+    double gain;
+    int32_t antenna;
+    int32_t channel;
+    int32_t index;
+    int32_t bits;
+    double sampleRate;
+    int32_t dynamic;
+} params;
+
 static void control_c_handler (int sig, siginfo_t *siginfo, void *context){
     control_c_received = 1;
 }
@@ -61,19 +71,65 @@ static void print_usage(const char *progname){
     exit(0);
 }
 
-static void parse_options() {
+static void parse_options(int argc, char *const argv[], params * parameters) {
+	 while (1) {
+		int option_index = 0;
+		static struct option long_options[] = {
+			{"gain",   required_argument, 0,  'g' },
+			{"channel",   required_argument, 0,  'c' },
+			{"antenna",   required_argument, 0,  'a' },
+			{"index", required_argument, 0, 'i'},
+			{"bits", required_argument, 0, 'b'},
+			{"samplerate", required_argument, 0, 's'},
+			{"dynamic", required_argument, 0, 'd'},
+			{0,         0,                 0,  0 }
+		};
 
+		int c = getopt_long(argc, argv, "g:c:a:i:s:b:d:", long_options, &option_index);
+		if (c == -1) {
+			//print_usage(argv[0]);	// always called in last round, therefore not printing info.. manual first run?
+			break;
+		}
+		switch (c) {
+			case 0:
+				#if 1
+				fprintf(stderr, "option %s", long_options[option_index].name);
+				if (optarg)
+					fprintf(stderr, " with arg %s", optarg);
+				fprintf(stderr, "\n");
+				#endif
+			break;
+			case 'a':
+				parameters->antenna = strtol(optarg, NULL, 0);
+			break;
+			case 'b':
+				parameters->bits = strtol(optarg, NULL, 0);
+			break;
+			case 'c':
+				parameters->channel = strtol(optarg, NULL, 0);
+			break;
+			case 'g':
+				parameters->gain = strtod(optarg, NULL);
+			break;
+			case 'i':
+				parameters->index = strtol(optarg, NULL, 0);
+			break;
+			case 's':
+				parameters->sampleRate = strtod(optarg, NULL);
+			break;
+			case 'd':
+				parameters->dynamic = strtol(optarg, NULL, 0);
+				if(parameters->dynamic > 2047){
+					parameters->dynamic = 2047;
+				}
+			break;
+			default:
+				print_usage(argv[0]);
+			break;
+		}
+	}
 }
 
-typedef struct {
-    double gain;
-    int32_t antenna;
-    int32_t channel;
-    int32_t index;
-    int32_t bits;
-    double sampleRate;
-    int32_t dynamic;
-} params;
 
 int main(int argc, char *const argv[]){
 	sighandler_setup();
@@ -99,63 +155,8 @@ int main(int argc, char *const argv[]){
 		.dynamic = 2047
     };
 
-    while (1) {
-        int option_index = 0;
-        static struct option long_options[] = {
-            {"gain",   required_argument, 0,  'g' },
-            {"channel",   required_argument, 0,  'c' },
-            {"antenna",   required_argument, 0,  'a' },
-            {"index", required_argument, 0, 'i'},
-            {"bits", required_argument, 0, 'b'},
-            {"samplerate", required_argument, 0, 's'},
-            {"dynamic", required_argument, 0, 'd'},
-            {0,         0,                 0,  0 }
-        };
+    parse_options(argc, argv, &parameters);
 
-        int c = getopt_long(argc, argv, "g:c:a:i:s:b:d:", long_options, &option_index);
-        printf("foo %d\n", c);
-        if (c == -1) {
-        	//print_usage(argv[0]);
-        	break;
-        }
-        switch (c) {
-            case 0:
-                #if 1
-                fprintf(stderr, "option %s", long_options[option_index].name);
-                if (optarg)
-                    fprintf(stderr, " with arg %s", optarg);
-                fprintf(stderr, "\n");
-                #endif
-            break;
-            case 'a':
-                parameters.antenna = strtol(optarg, NULL, 0);
-            break;
-            case 'b':
-                parameters.bits = strtol(optarg, NULL, 0);
-            break;
-            case 'c':
-                parameters.channel = strtol(optarg, NULL, 0);
-            break;
-            case 'g':
-            	parameters.gain = strtod(optarg, NULL);
-            break;
-            case 'i':
-                parameters.index = strtol(optarg, NULL, 0);
-            break;
-            case 's':
-                parameters.sampleRate = strtod(optarg, NULL);
-            break;
-            case 'd':
-                parameters.dynamic = strtol(optarg, NULL, 0);
-                if(parameters.dynamic > 2047){
-                    parameters.dynamic = 2047;
-                }
-            break;
-            default:
-                print_usage(argv[0]);
-            break;
-        }
-    }
     // Use correct values
     // Use existing device
     if((parameters.index < 0) || (parameters.index >= device_count)){
