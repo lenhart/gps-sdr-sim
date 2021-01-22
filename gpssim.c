@@ -1892,8 +1892,13 @@ int main(int argc, char *argv[])
 	}
 
 	if (duration<0.0
+<<<<<<< HEAD
 			|| (duration>((double)USER_MOTION_SIZE)/10.0 && !staticLocationMode)	// TODO this seems overly complicated. maybe use positive cases and switch in || cases?
 			|| ((duration>STATIC_MAX_DURATION && staticLocationMode) && !usesocket))
+=======
+			|| (duration>((double)USER_MOTION_SIZE)/10.0 && !staticLocationMode)
+			|| (duration>STATIC_MAX_DURATION && staticLocationMode))
+>>>>>>> spelling2
 	{
 		fprintf(stderr, "ERROR: Invalid duration.\n");
 		exit(1);
