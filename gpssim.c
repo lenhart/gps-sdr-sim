@@ -1854,7 +1854,7 @@ int main(int argc, char *argv[])
 			verb = true;
 			break;
 		case 'n':
-			sscanf(optarg,"%hd",&port);
+			sscanf(optarg,"%d",&port);
 			usesocket = true;
 			break;
 		case  'w':
@@ -1922,17 +1922,16 @@ int main(int argc, char *argv[])
 	else
 	{
 		// Read user motion file
-		if (nmeaGGA==true)
-			numd = readNmeaGGA(xyz, umfile);
-		else
-			numd = readUserMotion(xyz, umfile);
-
-		if (numd==-1)
+		if (nmeaGGA)
 		{
-			fprintf(stderr, "ERROR: Failed to open user motion / NMEA GGA file.\n");
-			exit(1);
+			numd = readNmeaGGA(xyz, umfile);
 		}
-		else if (numd==0)
+		else
+		{
+			numd = readUserMotion(xyz, umfile);
+		}
+
+		if (numd<=0)
 		{
 			fprintf(stderr, "ERROR: Failed to read user motion / NMEA GGA data.\n");
 			exit(1);
@@ -1940,7 +1939,9 @@ int main(int argc, char *argv[])
 
 		// Set simulation duration
 		if (numd>iduration)
+		{
 			numd = iduration;
+		}
 	} 
 /*
 	fprintf(stderr, "xyz = %11.1f, %11.1f, %11.1f\n", xyz[0][0], xyz[0][1], xyz[0][2]);
