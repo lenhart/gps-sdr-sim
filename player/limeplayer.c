@@ -212,7 +212,7 @@ static int setup_sdr(params * parameters, lms_device_t ** device_ptr, lms_stream
 		printf("setLOFrequency(%lf)=%d(%s)" "\n", TX_FREQUENCY, setLOFrequency, LMS_GetLastErrorMessage());
 	}
 
-#ifndef __USE_LPF__
+#ifdef __USE_LPF__
 	lms_range_t LPFBWRange;
 	LMS_GetLPFBWRange(device, LMS_CH_TX, &LPFBWRange);
 	// printf("TX%d LPFBW [%lf .. %lf] (step %lf)" "\n", channel, LPFBWRange.min, LPFBWRange.max, LPFBWRange.step);
@@ -267,9 +267,22 @@ static int setup_sdr(params * parameters, lms_device_t ** device_ptr, lms_stream
 		printf("setupStream=%d(%s)" "\n", setupStream, LMS_GetLastErrorMessage());
 	}
 
+	LMS_StartStream(tx_stream);
+
 	return (0);
 }
 
+static void print_loop_info(lms_stream_t * tx_stream) {
+	static int loop = 0;
+	if(0 == (loop % 100)){
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		printf("gettimeofday()=> %ld:%06ld ; ", tv.tv_sec, tv.tv_usec);
+		lms_stream_status_t status;
+		LMS_GetStreamStatus(tx_stream, &status); //Obtain TX stream stats
+		printf("TX rate:%lf MB/s" "\n", status.linkRate / 1e6);
+	}
+}
 
 int main(int argc, char *const argv[]){
 	sighandler_setup();
@@ -301,32 +314,21 @@ int main(int argc, char *const argv[]){
         signed short int q;
     };
 
-    int nSamples = (int)parameters.sampleRate / 100;
+    int nSamples = (int) parameters.sampleRate / 100;
     struct s16iq_sample_s *sampleBuffer = malloc(sizeof(struct s16iq_sample_s) * nSamples);
 
-    LMS_StartStream(&tx_stream);
-
-    int loop = 0;
     if((12 == parameters.bits) || (16 == parameters.bits)){
+    	//=================================================
         // File contains interleaved 16-bit IQ values, either with only 12-bit data, or with 16-bit data
+    	//=================================================
         while((0 == control_c_received) && fread(sampleBuffer, sizeof(struct s16iq_sample_s), nSamples, stdin)){
-            loop++;
-            if(0 == (loop % 100)){
-                struct timeval tv;
-                gettimeofday(&tv, NULL);
-                printf("gettimeofday()=> %ld:%06ld ; ", tv.tv_sec, tv.tv_usec);
-                lms_stream_status_t status;
-                LMS_GetStreamStatus(&tx_stream, &status); //Obtain TX stream stats
-                printf("TX rate:%lf MB/s" "\n", status.linkRate / 1e6);
-            }
+            print_loop_info(&tx_stream);
             if(16 == parameters.bits){
                 // Scale down to 12-bit
                 // Quick and dirty, so -1 (0xFFFF) to -15 (0xFFF1) scale down to -1 instead of 0
-                int i = 0;
-                while(i < nSamples){
+            	for (int i = 0; i < nSamples; i++) {
                     sampleBuffer[i].i >>= 4;
                     sampleBuffer[i].q >>= 4;
-                    i++;
                 }
             }
             int sendStream = LMS_SendStream(&tx_stream, sampleBuffer, nSamples, NULL, 1000);
@@ -335,28 +337,20 @@ int main(int argc, char *const argv[]){
             }
         }
     }else if(8 == parameters.bits){
+    	//=================================================
         // File contains interleaved signed 8-bit IQ values
+    	//=================================================
         struct s8iq_sample_s {
             signed char i;
             signed char q;
         };
         struct s8iq_sample_s *fileSamples = malloc(sizeof(struct s8iq_sample_s) * nSamples);
         while((0 == control_c_received) && fread(fileSamples, sizeof(struct s8iq_sample_s), nSamples, stdin)){
-            loop++;
-            if(0 == (loop % 100)){
-                struct timeval tv;
-                gettimeofday(&tv, NULL);
-                printf("gettimeofday()=> %ld:%06ld ; ", tv.tv_sec, tv.tv_usec);
-                lms_stream_status_t status;
-                LMS_GetStreamStatus(&tx_stream, &status); //Obtain TX stream stats
-                printf("TX rate:%lf MB/s" "\n", status.linkRate / 1e6);
-            }
+            print_loop_info(&tx_stream);
             // Up-Scale to 12-bit
-            int i = 0;
-            while(i < nSamples){
+        	for (int i = 0; i < nSamples; i++) {
                 sampleBuffer[i].i = (fileSamples[i].i << 4);
                 sampleBuffer[i].q = (fileSamples[i].q << 4);
-                i++;
             }
             int sendStream = LMS_SendStream(&tx_stream, sampleBuffer, nSamples, NULL, 1000);
             if(sendStream < 0){
@@ -365,28 +359,21 @@ int main(int argc, char *const argv[]){
         }
         free(fileSamples);
     }else if(1 == parameters.bits){
+    	//=================================================
         // File contains interleaved signed 1-bit IQ values
         // Each byte is IQIQIQIQ
+    	//=================================================
         int16_t expand_lut[256][8];
-        int i, j;
-        for (i=0; i<256; i++){
-            for (j=0; j<8; j++){
-                expand_lut[i][j] = ((i>>(7-j))&0x1)?parameters.dynamic:-parameters.dynamic;
+        for (int i=0; i<256; i++){
+            for (int j=0; j<8; j++){
+                expand_lut[i][j] = ((i>>(7-j))&0x1)? parameters.dynamic :-parameters.dynamic;
             }
         }
         printf("1-bit mode: using dynamic=%d" "\n", parameters.dynamic);
         // printf("sizeof(expand_lut[][])=%d, sizeof(expand_lut[0])=%d" "\n", sizeof(expand_lut), sizeof(expand_lut[0]));
         int8_t *fileBuffer = malloc(sizeof(int8_t) * nSamples);
         while((0 == control_c_received) && fread(fileBuffer, sizeof(int8_t), nSamples / 4, stdin)){
-            loop++;
-            if(0 == (loop % 100)){
-                struct timeval tv;
-                gettimeofday(&tv, NULL);
-                printf("gettimeofday()=> %ld:%06ld ; ", tv.tv_sec, tv.tv_usec);
-                lms_stream_status_t status;
-                LMS_GetStreamStatus(&tx_stream, &status); //Obtain TX stream stats
-                printf("TX rate:%lf MB/s" "\n", status.linkRate / 1e6);
-            }
+            print_loop_info(&tx_stream);
             // Expand
             int src = 0;
             int dst = 0;
@@ -402,12 +389,11 @@ int main(int argc, char *const argv[]){
         }
         free(fileBuffer);
     }
-
-    LMS_StopStream(&tx_stream);
-    LMS_DestroyStream(device, &tx_stream);
-
     free(sampleBuffer);
 
+    // close sdr resources
+    LMS_StopStream(&tx_stream);
+    LMS_DestroyStream(device, &tx_stream);
     LMS_EnableChannel(device, LMS_CH_TX, parameters.channel, false);
     LMS_Close(device);
 
