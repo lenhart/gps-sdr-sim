@@ -110,6 +110,7 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 			break;
 			case 'g':
 				parameters->gain = strtod(optarg, NULL);
+			    printf("Using normalized options.parameters.gain %lf" "\n", parameters->gain);
 			break;
 			case 'i':
 				parameters->index = strtol(optarg, NULL, 0);
@@ -128,22 +129,146 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 			break;
 		}
 	}
+	// Normalized gain shall be in [0.0 .. 1.0]
+	if(parameters->gain < 0.0){
+		parameters->gain = 0.0;
+	}
+	if(parameters->gain > 1.0){
+		parameters->gain = 1.0;
+	}
+}
+
+static int setup_sdr(params * parameters, lms_device_t * device, lms_stream_t * tx_stream) {
+	int device_count = LMS_GetDeviceList(NULL);
+	if(device_count < 1){
+		return(EXIT_CODE_NO_DEVICE);
+	}
+
+	lms_info_str_t *device_list = malloc(sizeof(lms_info_str_t) * device_count);
+	device_count = LMS_GetDeviceList(device_list);
+
+	/*for (int i = 0; i < device_count; i++){
+		//printf("device[%d/%d]=%s" "\n", i + 1, device_count, device_list[i]);
+	}*/
+
+	// Use correct values
+	// Use existing device
+	if((parameters->index < 0) || (parameters->index >= device_count)){
+		parameters->index = 0;
+	}
+	printf("Using device index %d [%s]" "\n", parameters->index, device_list[parameters->index]);
+
+	if(LMS_Open(&device, device_list[parameters->index], NULL)){
+		return(EXIT_CODE_LMS_OPEN);
+	}
+
+	int lmsReset = LMS_Reset(device);
+	if(lmsReset){
+		printf("lmsReset %d(%s)" "\n", lmsReset, LMS_GetLastErrorMessage());
+	}
+	int lmsInit = LMS_Init(device);
+	if(lmsInit){
+		printf("lmsInit %d(%s)" "\n", lmsInit, LMS_GetLastErrorMessage());
+	}
+
+	int channel_count = LMS_GetNumChannels(device, LMS_CH_TX);
+	// printf("Tx channel count %d" "\n", channel_count);
+	if((parameters->channel < 0) || (parameters->channel >= channel_count)){
+		parameters->channel = 0;
+	}
+	printf("Using channel %d" "\n", parameters->channel);
+
+	int antenna_count = LMS_GetAntennaList(device, LMS_CH_TX, parameters->channel, NULL);
+	// printf("TX%d Channel has %d antenna(ae)" "\n", channel, antenna_count);
+	lms_name_t antenna_name[antenna_count];
+	if(antenna_count > 0){
+		int i = 0;
+		lms_range_t antenna_bw[antenna_count];
+		LMS_GetAntennaList(device, LMS_CH_TX, parameters->channel, antenna_name);
+		for(i = 0 ; i < antenna_count ; i++){
+			LMS_GetAntennaBW(device, LMS_CH_TX, parameters->channel, i, antenna_bw + i);
+			// printf("Channel %d, antenna [%s] has BW [%lf .. %lf] (step %lf)" "\n", channel, antenna_name[i], antenna_bw[i].min, antenna_bw[i].max, antenna_bw[i].step);
+		}
+	}
+	if((parameters->antenna < 0) || (parameters->antenna >= antenna_count)){
+		parameters->antenna = DEFAULT_ANTENNA;
+	}
+	// LMS_SetAntenna(device, LMS_CH_TX, channel, antenna); // SetLOFrequency should take care of selecting the proper fooantenna
+
+	LMS_SetNormalizedGain(device, LMS_CH_TX, parameters->channel, parameters->gain);
+	// Disable all other channels
+	LMS_EnableChannel(device, LMS_CH_TX, 1 - parameters->channel, false);
+	LMS_EnableChannel(device, LMS_CH_RX, 0, true); /* LimeSuite bug workaround (needed since LimeSuite git rev 52d6129 - or v18.06.0) */
+	LMS_EnableChannel(device, LMS_CH_RX, 1, false);
+	// Enable our Tx parameters.channel
+	LMS_EnableChannel(device, LMS_CH_TX, parameters->channel, true);
+
+	int setLOFrequency = LMS_SetLOFrequency(device, LMS_CH_TX, parameters->channel, TX_FREQUENCY);
+	if(setLOFrequency){
+		printf("setLOFrequency(%lf)=%d(%s)" "\n", TX_FREQUENCY, setLOFrequency, LMS_GetLastErrorMessage());
+	}
+
+#ifndef __USE_LPF__
+	lms_range_t LPFBWRange;
+	LMS_GetLPFBWRange(device, LMS_CH_TX, &LPFBWRange);
+	// printf("TX%d LPFBW [%lf .. %lf] (step %lf)" "\n", channel, LPFBWRange.min, LPFBWRange.max, LPFBWRange.step);
+	double LPFBW = TX_BANDWIDTH;
+	if(LPFBW < LPFBWRange.min){
+		LPFBW = LPFBWRange.min;
+	}
+	if(LPFBW > LPFBWRange.max){
+		LPFBW = LPFBWRange.min; //TODO IS THIS INTENDED?
+	}
+	int setLPFBW = LMS_SetLPFBW(device, LMS_CH_TX, parameters->channel, LPFBW);
+	if(setLPFBW){
+		printf("setLPFBW(%lf)=%d(%s)" "\n", LPFBW, setLPFBW, LMS_GetLastErrorMessage());
+	}
+	int enableLPF = LMS_SetLPF(device, LMS_CH_TX, parameters->channel, true);
+	if(enableLPF){
+		printf("enableLPF=%d(%s)" "\n", enableLPF, LMS_GetLastErrorMessage());
+	}
+#endif
+
+	lms_range_t sampleRateRange;
+	int getSampleRateRange = LMS_GetSampleRateRange(device, LMS_CH_TX, &sampleRateRange);
+	if(getSampleRateRange){
+		printf("getSampleRateRange=%d(%s)" "\n", getSampleRateRange, LMS_GetLastErrorMessage());
+	}else{
+		// printf("sampleRateRange [%lf MHz.. %lf MHz] (step=%lf Hz)" "\n", sampleRateRange.min / 1e6, sampleRateRange.max / 1e6, sampleRateRange.step);
+	}
+
+	printf("Set sample rate to %lf ..." "\n", parameters->sampleRate);
+	int setSampleRate = LMS_SetSampleRate(device, parameters->sampleRate, 0);
+	if(setSampleRate){
+		printf("setSampleRate=%d(%s)" "\n", setSampleRate, LMS_GetLastErrorMessage());
+	}
+	double actualHostSampleRate = 0.0;
+	double actualRFSampleRate = 0.0;
+	int getSampleRate = LMS_GetSampleRate(device, LMS_CH_TX, parameters->channel, &actualHostSampleRate, &actualRFSampleRate);
+	if(getSampleRate){
+		printf("getSampleRate=%d(%s)" "\n", getSampleRate, LMS_GetLastErrorMessage());
+	}else{
+		printf("actualRate %lf (Host) / %lf (RF)" "\n", actualHostSampleRate, actualRFSampleRate);
+	}
+
+	printf("Calibrating ..." "\n");
+	int calibrate = LMS_Calibrate(device, LMS_CH_TX, parameters->channel, TX_BANDWIDTH, 0);
+	if(calibrate){
+		printf("calibrate=%d(%s)" "\n", calibrate, LMS_GetLastErrorMessage());
+	}
+
+	printf("Setup TX stream ..." "\n");
+	int setupStream = LMS_SetupStream(device, tx_stream);
+	if(setupStream){
+		printf("setupStream=%d(%s)" "\n", setupStream, LMS_GetLastErrorMessage());
+	}
+
+	return (0);
 }
 
 
 int main(int argc, char *const argv[]){
 	sighandler_setup();
-
-    int device_count = LMS_GetDeviceList(NULL);
-    if(device_count < 1){
-        return(EXIT_CODE_NO_DEVICE);
-    }
-    lms_info_str_t *device_list = malloc(sizeof(lms_info_str_t) * device_count);
-    device_count = LMS_GetDeviceList(device_list);
-
-    for (int i = 0; i < device_count; i++){
-        //printf("device[%d/%d]=%s" "\n", i + 1, device_count, device_list[i]);
-    }
 
     params parameters = {
 		.gain = 1.0,
@@ -154,133 +279,18 @@ int main(int argc, char *const argv[]){
 		.sampleRate = TX_SAMPLERATE,
 		.dynamic = 2047
     };
+    lms_device_t * device = NULL;
+    lms_stream_t tx_stream = {.channel = parameters.channel, .fifoSize = 1024*1024, .throughputVsLatency = 0.5, .isTx = true, .dataFmt = LMS_FMT_I12};
 
     parse_options(argc, argv, &parameters);
 
-    // Use correct values
-    // Use existing device
-    if((parameters.index < 0) || (parameters.index >= device_count)){
-        parameters.index = 0;
-    }
-    printf("Using device index %d [%s]" "\n", parameters.index, device_list[parameters.index]);
-
-    // Normalized options.parameters.gain shall be in [0.0 .. 1.0]
-    if(parameters.gain < 0.0){
-        parameters.gain = 0.0;
-    }
-    if(parameters.gain > 1.0){
-        parameters.gain = 1.0;
-    }
-    printf("Using normalized options.parameters.gain %lf" "\n", parameters.gain);
-
-
-    lms_device_t *device = NULL;
-
-    if(LMS_Open(&device, device_list[parameters.index], NULL)){
-        return(EXIT_CODE_LMS_OPEN);
-    }
-
-    int lmsReset = LMS_Reset(device);
-    if(lmsReset){
-        printf("lmsReset %d(%s)" "\n", lmsReset, LMS_GetLastErrorMessage());
-    }
-    int lmsInit = LMS_Init(device);
-    if(lmsInit){
-        printf("lmsInit %d(%s)" "\n", lmsInit, LMS_GetLastErrorMessage());
-    }
-
-    int channel_count = LMS_GetNumChannels(device, LMS_CH_TX);
-    // printf("Tx channel count %d" "\n", channel_count);
-    if((parameters.channel < 0) || (parameters.channel >= channel_count)){
-        parameters.channel = 0;
-    }
-    printf("Using channel %d" "\n", parameters.channel);
-
-    int antenna_count = LMS_GetAntennaList(device, LMS_CH_TX, parameters.channel, NULL);
-    // printf("TX%d Channel has %d antenna(ae)" "\n", channel, antenna_count);
-    lms_name_t antenna_name[antenna_count];
-    if(antenna_count > 0){
-        int i = 0;
-        lms_range_t antenna_bw[antenna_count];
-        LMS_GetAntennaList(device, LMS_CH_TX, parameters.channel, antenna_name);
-        for(i = 0 ; i < antenna_count ; i++){
-            LMS_GetAntennaBW(device, LMS_CH_TX, parameters.channel, i, antenna_bw + i);
-            // printf("Channel %d, antenna [%s] has BW [%lf .. %lf] (step %lf)" "\n", channel, antenna_name[i], antenna_bw[i].min, antenna_bw[i].max, antenna_bw[i].step);
-        }
-    }
-    if((parameters.antenna < 0) || (parameters.antenna >= antenna_count)){
-    	parameters.antenna = DEFAULT_ANTENNA;
-    }
-    // LMS_SetAntenna(device, LMS_CH_TX, channel, antenna); // SetLOFrequency should take care of selecting the proper fooantenna
-    
-    LMS_SetNormalizedGain(device, LMS_CH_TX, parameters.channel, parameters.gain);
-    // Disable all other channels
-    LMS_EnableChannel(device, LMS_CH_TX, 1 - parameters.channel, false);
-    LMS_EnableChannel(device, LMS_CH_RX, 0, true); /* LimeSuite bug workaround (needed since LimeSuite git rev 52d6129 - or v18.06.0) */
-    LMS_EnableChannel(device, LMS_CH_RX, 1, false);
-    // Enable our Tx parameters.channel
-    LMS_EnableChannel(device, LMS_CH_TX, parameters.channel, true);
-
-    int setLOFrequency = LMS_SetLOFrequency(device, LMS_CH_TX, parameters.channel, TX_FREQUENCY);
-    if(setLOFrequency){
-        printf("setLOFrequency(%lf)=%d(%s)" "\n", TX_FREQUENCY, setLOFrequency, LMS_GetLastErrorMessage());
-    }
-
-#ifdef __USE_LPF__
-    lms_range_t LPFBWRange;
-    LMS_GetLPFBWRange(device, LMS_CH_TX, &LPFBWRange);
-    // printf("TX%d LPFBW [%lf .. %lf] (step %lf)" "\n", channel, LPFBWRange.min, LPFBWRange.max, LPFBWRange.step);
-    double LPFBW = TX_BANDWIDTH;
-    if(LPFBW < LPFBWRange.min){
-        LPFBW = LPFBWRange.min;
-    }
-    if(LPFBW > LPFBWRange.max){
-        LPFBW = LPFBWRange.min; //TODO IS THIS INTENDED?
-    }
-    int setLPFBW = LMS_SetLPFBW(device, LMS_CH_TX, parameters.channel, LPFBW);
-    if(setLPFBW){
-        printf("setLPFBW(%lf)=%d(%s)" "\n", LPFBW, setLPFBW, LMS_GetLastErrorMessage());
-    }
-    int enableLPF = LMS_SetLPF(device, LMS_CH_TX, parameters.channel, true);
-    if(enableLPF){
-        printf("enableLPF=%d(%s)" "\n", enableLPF, LMS_GetLastErrorMessage());
-    }
-#endif
-
-    lms_range_t sampleRateRange;
-    int getSampleRateRange = LMS_GetSampleRateRange(device, LMS_CH_TX, &sampleRateRange);
-    if(getSampleRateRange){
-        printf("getSampleRateRange=%d(%s)" "\n", getSampleRateRange, LMS_GetLastErrorMessage());
-    }else{
-        // printf("sampleRateRange [%lf MHz.. %lf MHz] (step=%lf Hz)" "\n", sampleRateRange.min / 1e6, sampleRateRange.max / 1e6, sampleRateRange.step);
-    }
-
-    printf("Set sample rate to %lf ..." "\n", parameters.sampleRate);
-    int setSampleRate = LMS_SetSampleRate(device, parameters.sampleRate, 0);
-    if(setSampleRate){
-        printf("setSampleRate=%d(%s)" "\n", setSampleRate, LMS_GetLastErrorMessage());
-    }
-    double actualHostSampleRate = 0.0;
-    double actualRFSampleRate = 0.0;
-    int getSampleRate = LMS_GetSampleRate(device, LMS_CH_TX, parameters.channel, &actualHostSampleRate, &actualRFSampleRate);
-    if(getSampleRate){
-        printf("getSampleRate=%d(%s)" "\n", getSampleRate, LMS_GetLastErrorMessage());
-    }else{
-        printf("actualRate %lf (Host) / %lf (RF)" "\n", actualHostSampleRate, actualRFSampleRate);
-    }
-
-    printf("Calibrating ..." "\n");
-    int calibrate = LMS_Calibrate(device, LMS_CH_TX, parameters.channel, TX_BANDWIDTH, 0);
-    if(calibrate){
-        printf("calibrate=%d(%s)" "\n", calibrate, LMS_GetLastErrorMessage());
-    }
-
-    printf("Setup TX stream ..." "\n");
-    lms_stream_t tx_stream = {.channel = parameters.channel, .fifoSize = 1024*1024, .throughputVsLatency = 0.5, .isTx = true, .dataFmt = LMS_FMT_I12};
-    int setupStream = LMS_SetupStream(device, &tx_stream);
-    if(setupStream){
-        printf("setupStream=%d(%s)" "\n", setupStream, LMS_GetLastErrorMessage());
-    }
+    // setup sdr
+	int err = setup_sdr(&parameters, &device, &tx_stream);
+	if (err != 0) {
+		return (err);
+	} else {
+		printf("setup sdr successfully\n");
+	}
 
     struct s16iq_sample_s {
         signed short int i;
@@ -288,7 +298,7 @@ int main(int argc, char *const argv[]){
     };
 
     int nSamples = (int)parameters.sampleRate / 100;
-    struct s16iq_sample_s *sampleBuffer = (struct s16iq_sample_s*)malloc(sizeof(struct s16iq_sample_s) * nSamples);
+    struct s16iq_sample_s *sampleBuffer = malloc(sizeof(struct s16iq_sample_s) * nSamples);
 
     LMS_StartStream(&tx_stream);
 
@@ -326,7 +336,7 @@ int main(int argc, char *const argv[]){
             signed char i;
             signed char q;
         };
-        struct s8iq_sample_s *fileSamples = (struct s8iq_sample_s*)malloc(sizeof(struct s8iq_sample_s) * nSamples);
+        struct s8iq_sample_s *fileSamples = malloc(sizeof(struct s8iq_sample_s) * nSamples);
         while((0 == control_c_received) && fread(fileSamples, sizeof(struct s8iq_sample_s), nSamples, stdin)){
             loop++;
             if(0 == (loop % 100)){
@@ -362,7 +372,7 @@ int main(int argc, char *const argv[]){
         }
         printf("1-bit mode: using dynamic=%d" "\n", parameters.dynamic);
         // printf("sizeof(expand_lut[][])=%d, sizeof(expand_lut[0])=%d" "\n", sizeof(expand_lut), sizeof(expand_lut[0]));
-        int8_t *fileBuffer = (int8_t*)malloc(sizeof(int8_t) * nSamples);
+        int8_t *fileBuffer = malloc(sizeof(int8_t) * nSamples);
         while((0 == control_c_received) && fread(fileBuffer, sizeof(int8_t), nSamples / 4, stdin)){
             loop++;
             if(0 == (loop % 100)){
