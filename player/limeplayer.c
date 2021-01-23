@@ -138,7 +138,10 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 	}
 }
 
-static int setup_sdr(params * parameters, lms_device_t * device, lms_stream_t * tx_stream) {
+/**
+ * pass as double ptr in order to let opening fct assing handle
+ */
+static int setup_sdr(params * parameters, lms_device_t ** device_ptr, lms_stream_t * tx_stream) {
 	int device_count = LMS_GetDeviceList(NULL);
 	if(device_count < 1){
 		return(EXIT_CODE_NO_DEVICE);
@@ -158,9 +161,10 @@ static int setup_sdr(params * parameters, lms_device_t * device, lms_stream_t * 
 	}
 	printf("Using device index %d [%s]" "\n", parameters->index, device_list[parameters->index]);
 
-	if(LMS_Open(&device, device_list[parameters->index], NULL)){
+	if(LMS_Open(device_ptr, device_list[parameters->index], NULL)){
 		return(EXIT_CODE_LMS_OPEN);
 	}
+	lms_device_t * device = *device_ptr;
 
 	int lmsReset = LMS_Reset(device);
 	if(lmsReset){
