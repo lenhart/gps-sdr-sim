@@ -2151,10 +2151,10 @@ int main(int argc, char *argv[])
 	// Allocate visible satellites
 	allocateChannel(chan, eph[ieph], ionoutc, grx, xyz[0], elvmask);
 
+	fprintf(stderr,"%3s %5s %5s %7s %9s\n" ,"prn", "azim", "elev", "pseudorange", "ionosphericDelay"); // azel 0/1 rho0 iono delay\n");
 	for(i=0; i<MAX_CHAN; i++)
 	{
 		if (chan[i].prn>0)
-			// todo print text line w/ column descriptions
 			fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn, 
 				chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
 	}
