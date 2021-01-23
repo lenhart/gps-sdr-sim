@@ -21,8 +21,7 @@
 #define TX_BANDWIDTH    5000000.0
 #define DEFAULT_ANTENNA 1 // antenna with BW [30MHz .. 2000MHz]
 
-#define STRINGIFY2(X) #X	// TODO REMOVE PROBABLY?
-#define STRINGIFY(X) STRINGIFY2(X)
+#define STRINGIFY(X) #X
 
 static int control_c_received = 0;
 
@@ -66,7 +65,9 @@ static void print_usage(const char *progname){
             "\t" "-b <bits> or --bits <bits> select bit count in IQ sample in { 1, 8, 12, 16 }, (default: 16)" "\n"
             "\t" "-s <samplerate> or --samplerate <samplerate> configure BB sample rate (default: " STRINGIFY(TX_SAMPLERATE) ")" "\n"
             "\t" "-d <dynamic> --dynamic <dynamic> configure dynamic for the 1-bit mode (default: 2047, max 12-bit signed value supported by LimeSDR)" "\n"
-        "Example:" "\n"
+			"\t" "-h display this help"  "\n"
+
+			"Example:" "\n"
         "\t" "./limeplayer -s 1000000 -b 1 -d 1023 -g 0.1 < ../circle.1b.1M.bin" "\n", progname);
     exit(0);
 }
@@ -82,6 +83,7 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 			{"bits", required_argument, 0, 'b'},
 			{"samplerate", required_argument, 0, 's'},
 			{"dynamic", required_argument, 0, 'd'},
+			{"help", required_argument, 0, 'h'},
 			{0,         0,                 0,  0 }
 		};
 
@@ -124,6 +126,7 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 					parameters->dynamic = 2047;
 				}
 			break;
+			case 'h': // deliberate fall through
 			default:
 				print_usage(argv[0]);
 			break;
@@ -304,9 +307,10 @@ int main(int argc, char *const argv[]){
     // setup sdr
 	int err = setup_sdr(&parameters, &device, &tx_stream);
 	if (err != 0) {
+		fprintf(stderr, "No SDR device found\n");
 		return (err);
 	} else {
-		printf("setup sdr successfully\n");
+		printf("Setup SDR successfully\n");
 	}
 
     struct s16iq_sample_s {
