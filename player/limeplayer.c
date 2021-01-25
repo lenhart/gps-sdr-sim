@@ -33,6 +33,7 @@ typedef struct {
     int32_t bits;
     double sampleRate;
     int32_t dynamic;
+    bool verbose;
 } params;
 
 static void control_c_handler (int sig, siginfo_t *siginfo, void *context){
@@ -65,6 +66,7 @@ static void print_usage(const char *progname){
             "\t" "-b <bits> or --bits <bits> select bit count in IQ sample in { 1, 8, 12, 16 }, (default: 16)" "\n"
             "\t" "-s <samplerate> or --samplerate <samplerate> configure BB sample rate (default: " STRINGIFY(TX_SAMPLERATE) ")" "\n"
             "\t" "-d <dynamic> --dynamic <dynamic> configure dynamic for the 1-bit mode (default: 2047, max 12-bit signed value supported by LimeSDR)" "\n"
+			"\t" "-v verbose"
 			"\t" "-h display this help"  "\n"
 
 			"Example:" "\n"
@@ -83,6 +85,7 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 			{"bits", required_argument, 0, 'b'},
 			{"samplerate", required_argument, 0, 's'},
 			{"dynamic", required_argument, 0, 'd'},
+			{"verbose", required_argument, 0, 'v'},
 			{"help", required_argument, 0, 'h'},
 			{0,         0,                 0,  0 }
 		};
@@ -280,7 +283,7 @@ static void print_loop_info(lms_stream_t * tx_stream) {
 	if(0 == (loop % 100)){
 		struct timeval tv;
 		gettimeofday(&tv, NULL);
-		printf("gettimeofday()=> %ld:%06ld ; ", tv.tv_sec, tv.tv_usec);
+		//printf("gettimeofday()=> %ld:%06ld ; ", tv.tv_sec, tv.tv_usec);
 		lms_stream_status_t status;
 		LMS_GetStreamStatus(tx_stream, &status); //Obtain TX stream stats
 		printf("TX rate:%lf MB/s" "\n", status.linkRate / 1e6);
@@ -297,7 +300,8 @@ int main(int argc, char *const argv[]){
 		.index = 0,
 		.bits = 16,
 		.sampleRate = TX_SAMPLERATE,
-		.dynamic = 2047
+		.dynamic = 2047,
+		.verbose = false,
     };
     lms_device_t * device = NULL;
     lms_stream_t tx_stream = {.channel = parameters.channel, .fifoSize = 1024*1024, .throughputVsLatency = 0.5, .isTx = true, .dataFmt = LMS_FMT_I12};
@@ -326,7 +330,9 @@ int main(int argc, char *const argv[]){
         // File contains interleaved 16-bit IQ values, either with only 12-bit data, or with 16-bit data
     	//=================================================
         while((0 == control_c_received) && fread(sampleBuffer, sizeof(struct s16iq_sample_s), nSamples, stdin)){
-            print_loop_info(&tx_stream);
+        	if (parameters.verbose) {
+				print_loop_info(&tx_stream);
+        	}
             if(16 == parameters.bits){
                 // Scale down to 12-bit
                 // Quick and dirty, so -1 (0xFFFF) to -15 (0xFFF1) scale down to -1 instead of 0
@@ -350,7 +356,9 @@ int main(int argc, char *const argv[]){
         };
         struct s8iq_sample_s *fileSamples = malloc(sizeof(struct s8iq_sample_s) * nSamples);
         while((0 == control_c_received) && fread(fileSamples, sizeof(struct s8iq_sample_s), nSamples, stdin)){
-            print_loop_info(&tx_stream);
+        	if (parameters.verbose) {
+				print_loop_info(&tx_stream);
+        	}
             // Up-Scale to 12-bit
         	for (int i = 0; i < nSamples; i++) {
                 sampleBuffer[i].i = (fileSamples[i].i << 4);
@@ -377,7 +385,9 @@ int main(int argc, char *const argv[]){
         // printf("sizeof(expand_lut[][])=%d, sizeof(expand_lut[0])=%d" "\n", sizeof(expand_lut), sizeof(expand_lut[0]));
         int8_t *fileBuffer = malloc(sizeof(int8_t) * nSamples);
         while((0 == control_c_received) && fread(fileBuffer, sizeof(int8_t), nSamples / 4, stdin)){
-            print_loop_info(&tx_stream);
+        	if (parameters.verbose) {
+				print_loop_info(&tx_stream);
+        	}
             // Expand
             int src = 0;
             int dst = 0;

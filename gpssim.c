@@ -534,7 +534,7 @@ void satpos(const ephem_t eph, const double g_sec, double *pos, double *vel, dou
  *  \param[in] eph Ephemeris of given SV
  *  \param[out] sbf Array of five sub-frames, 10 long words each
  */
-void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_DWRD_SBF])
+void eph2sbf(const ephem_t *const eph, const ionoutc_t *const ionoutc, unsigned long sbf[5][N_DWRD_SBF])
 {
 	unsigned long wn;
 	unsigned long toe;
@@ -581,48 +581,48 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_
 	// FIXED: This has to be the "transmission" week number, not for the ephemeris reference time
 	//wn = (unsigned long)(eph.toe.week%1024);
 	wn = 0UL;
-	toe = (unsigned long)(eph.toe.sec/16.0);
-	toc = (unsigned long)(eph.toc.sec/16.0);
-	iode = (unsigned long)(eph.iode);
-	iodc = (unsigned long)(eph.iodc);
-	deltan = (long)(eph.deltan/POW2_M43/PI);
-	cuc = (long)(eph.cuc/POW2_M29);
-	cus = (long)(eph.cus/POW2_M29);
-	cic = (long)(eph.cic/POW2_M29);
-	cis = (long)(eph.cis/POW2_M29);
-	crc = (long)(eph.crc/POW2_M5);
-	crs = (long)(eph.crs/POW2_M5);
-	ecc = (unsigned long)(eph.ecc/POW2_M33);
-	sqrta = (unsigned long)(eph.sqrta/POW2_M19);
-	m0 = (long)(eph.m0/POW2_M31/PI);
-	omg0 = (long)(eph.omg0/POW2_M31/PI);
-	inc0 = (long)(eph.inc0/POW2_M31/PI);
-	aop = (long)(eph.aop/POW2_M31/PI);
-	omgdot = (long)(eph.omgdot/POW2_M43/PI);
-	idot = (long)(eph.idot/POW2_M43/PI);
-	af0 = (long)(eph.af0/POW2_M31);
-	af1 = (long)(eph.af1/POW2_M43);
-	af2 = (long)(eph.af2/POW2_M55);
-	tgd = (long)(eph.tgd/POW2_M31);
-	svhlth = (unsigned long)(eph.svhlth);
-	codeL2 = (unsigned long)(eph.codeL2);
+	toe = (unsigned long)(eph->toe.sec/16.0);
+	toc = (unsigned long)(eph->toc.sec/16.0);
+	iode = (unsigned long)(eph->iode);
+	iodc = (unsigned long)(eph->iodc);
+	deltan = (long)(eph->deltan/POW2_M43/PI);
+	cuc = (long)(eph->cuc/POW2_M29);
+	cus = (long)(eph->cus/POW2_M29);
+	cic = (long)(eph->cic/POW2_M29);
+	cis = (long)(eph->cis/POW2_M29);
+	crc = (long)(eph->crc/POW2_M5);
+	crs = (long)(eph->crs/POW2_M5);
+	ecc = (unsigned long)(eph->ecc/POW2_M33);
+	sqrta = (unsigned long)(eph->sqrta/POW2_M19);
+	m0 = (long)(eph->m0/POW2_M31/PI);
+	omg0 = (long)(eph->omg0/POW2_M31/PI);
+	inc0 = (long)(eph->inc0/POW2_M31/PI);
+	aop = (long)(eph->aop/POW2_M31/PI);
+	omgdot = (long)(eph->omgdot/POW2_M43/PI);
+	idot = (long)(eph->idot/POW2_M43/PI);
+	af0 = (long)(eph->af0/POW2_M31);
+	af1 = (long)(eph->af1/POW2_M43);
+	af2 = (long)(eph->af2/POW2_M55);
+	tgd = (long)(eph->tgd/POW2_M31);
+	svhlth = (unsigned long)(eph->svhlth);
+	codeL2 = (unsigned long)(eph->codeL2);
 
-	wna = (unsigned long)(eph.toe.week%256);
-	toa = (unsigned long)(eph.toe.sec/4096.0);
+	wna = (unsigned long)(eph->toe.week%256);
+	toa = (unsigned long)(eph->toe.sec/4096.0);
 
-	alpha0 = (signed long)round(ionoutc.alpha0/POW2_M30);
-	alpha1 = (signed long)round(ionoutc.alpha1/POW2_M27);
-	alpha2 = (signed long)round(ionoutc.alpha2/POW2_M24);
-	alpha3 = (signed long)round(ionoutc.alpha3/POW2_M24);
-	beta0 = (signed long)round(ionoutc.beta0/2048.0);
-	beta1 = (signed long)round(ionoutc.beta1/16384.0);
-	beta2 = (signed long)round(ionoutc.beta2/65536.0);
-	beta3 = (signed long)round(ionoutc.beta3/65536.0);
-	A0 = (signed long)round(ionoutc.A0/POW2_M30);
-	A1 = (signed long)round(ionoutc.A1/POW2_M50);
-	dtls = (signed long)(ionoutc.dtls);
-	tot = (unsigned long)(ionoutc.tot/4096);
-	wnt = (unsigned long)(ionoutc.wnt%256);
+	alpha0 = (signed long)round(ionoutc->alpha0/POW2_M30);
+	alpha1 = (signed long)round(ionoutc->alpha1/POW2_M27);
+	alpha2 = (signed long)round(ionoutc->alpha2/POW2_M24);
+	alpha3 = (signed long)round(ionoutc->alpha3/POW2_M24);
+	beta0 = (signed long)round(ionoutc->beta0/2048.0);
+	beta1 = (signed long)round(ionoutc->beta1/16384.0);
+	beta2 = (signed long)round(ionoutc->beta2/65536.0);
+	beta3 = (signed long)round(ionoutc->beta3/65536.0);
+	A0 = (signed long)round(ionoutc->A0/POW2_M30);
+	A1 = (signed long)round(ionoutc->A1/POW2_M50);
+	dtls = (signed long)(ionoutc->dtls);
+	tot = (unsigned long)(ionoutc->tot/4096);
+	wnt = (unsigned long)(ionoutc->wnt%256);
 	// TODO: Specify scheduled leap seconds in command options
 	// 2016/12/31 (Sat) -> WNlsf = 1929, DN = 7 (http://navigationservices.agi.com/GNSSWeb/)
 	// Days are counted from 1 to 7 (Sunday is 1).
@@ -666,7 +666,7 @@ void eph2sbf(const ephem_t eph, const ionoutc_t ionoutc, unsigned long sbf[5][N_
 	sbf[2][8] = (omgdot&0xFFFFFFUL)<<6;
 	sbf[2][9] = ((iode&0xFFUL)<<22) | ((idot&0x3FFFUL)<<8);
 
-	if (ionoutc.vflg==true)
+	if (ionoutc->vflg==true)
 	{
 		// Subframe 4, page 18
 		sbf[3][0] = 0x8B0000UL<<6;
@@ -833,12 +833,12 @@ double subGpsTime(const gpstime_t *const g1, const gpstime_t *const g0)
 	return(dt);
 }
 //TODO descr
-gpstime_t incGpsTime(const gpstime_t g0, const double dt)
+gpstime_t incGpsTime(const gpstime_t *const g0, const double dt)
 {
 	gpstime_t g1;
 
-	g1.week = g0.week;
-	g1.sec = g0.sec + dt;
+	g1.week = g0->week;
+	g1.sec = g0->sec + dt;
 
 	g1.sec = round(g1.sec*1000.0)/1000.0; // Avoid rounding error
 
@@ -1630,7 +1630,7 @@ int checkSatVisibility(const ephem_t eph, const double g_sec, const double *cons
 
 //TODO
 int allocate_channel(channel_t *const chan, const ephem_t *const eph, const ionoutc_t ionoutc,
-		const gpstime_t *const grx, const double *const xyz, const double elvMask)
+		const gpstime_t *const grx, const double *const xyz)//, const double elvMask)
 {
 	int nsat=0;
 	int i,sv;
@@ -1663,7 +1663,7 @@ int allocate_channel(channel_t *const chan, const ephem_t *const eph, const iono
 						codegen(chan[i].ca, chan[i].prn);
 
 						// Generate subframe
-						eph2sbf(eph[sv], ionoutc, chan[i].sbf);
+						eph2sbf(&eph[sv], &ionoutc, chan[i].sbf);
 
 						// Generate navigation message
 						generateNavMsg(grx, &chan[i], 1);
@@ -1979,12 +1979,12 @@ static int read_ephemeris(progopts * const opt, ephem_t eph[EPHEM_ARRAY_SIZE][MA
 				{
 					if (eph[i][sv].vflg==1)
 					{
-						gtmp = incGpsTime(eph[i][sv].toc, dsec);
+						gtmp = incGpsTime(&eph[i][sv].toc, dsec);
 						gps2date(&gtmp,&ttmp);
 						eph[i][sv].toc = gtmp;
 						eph[i][sv].t = ttmp;
 
-						gtmp = incGpsTime(eph[i][sv].toe, dsec);
+						gtmp = incGpsTime(&eph[i][sv].toe, dsec);
 						eph[i][sv].toe = gtmp;
 					}
 				}
@@ -2263,11 +2263,132 @@ static void update_code_carrier_phase(const int iq_buff_size,
 	}
 }
 
+/*! \brief Write data to output stream or file
+ * \param[in] opt Program options
+ * \param[in] iq_buff_size IQ buffer size
+ * \param[out] iq8_buff 8-bit IQ buffer
+ * \param[out] iq_buff 16-bit IQ buffer
+ * \param[out] fp File pointer
+ */
+static void output(const progopts * const opt, const int iq_buff_size,
+		signed char * const iq8_buff, short* iq_buff, FILE * fp)
+{
+	//
+	// Write to stream or socket
+	//
+	if (!opt->usesocket)
+	{
+		if (opt->data_format==SC01)
+		{
+			for (int isamp=0; isamp<2*iq_buff_size; isamp++)
+			{
+				if (isamp%8==0)
+					iq8_buff[isamp/8] = 0x00;
 
+				iq8_buff[isamp/8] |= (iq_buff[isamp]>0?0x01:0x00)<<(7-isamp%8);
+			}
+
+			fwrite(iq8_buff, 1, iq_buff_size/4, fp);
+		}
+		else if (opt->data_format==SC08)
+		{
+			for (int isamp=0; isamp<2*iq_buff_size; isamp++)
+				iq8_buff[isamp] = iq_buff[isamp]>>4; // 12-bit bladeRF -> 8-bit HackRF
+
+			fwrite(iq8_buff, 1, 2*iq_buff_size, fp);
+		}
+		else if(opt->data_format==SC16)
+		{
+			fwrite(iq_buff, 2, 2*iq_buff_size, fp);
+		}
+	}
+	else
+	{
+		float *datap = calloc(iq_buff_size*2,sizeof(float));
+		for(int l=0;l<iq_buff_size*2;l++){
+			datap[l] = (float)iq_buff[l];
+		}
+		socksend(opt->sockc,datap,iq_buff_size*2*sizeof(float));
+		free(datap);
+	}
+}
+
+/*! \brief Update navigation message and channel allocation every 30 seconds
+ * \param[in] opt
+ * \param[in] eph
+ * \param[in] grx
+ * \param[in] iumd
+ * \param[in] ieph
+ * \param[out] chan
+ * \returns New ieph counter
+ */
+static int update_navmsg_and_channelalloc(const progopts * const opt,
+		const ephem_t eph[EPHEM_ARRAY_SIZE][MAX_SAT],
+		const gpstime_t *const grx, const int iumd,
+		int ieph, channel_t *const chan)
+{
+	int igrx = (int)(grx->sec*10.0+0.5);
+
+	if (igrx%300==0) // Every 30 seconds
+	{
+		// Update navigation message
+		for (int i=0; i<MAX_CHAN; i++)
+		{
+			if (chan[i].prn>0)
+				generateNavMsg(grx, &chan[i], 0);
+		}
+
+		// Refresh ephemeris and subframes
+		// Quick and dirty fix. Need more elegant way.
+		for (int sv=0; sv<MAX_SAT; sv++)
+		{
+			if (eph[ieph+1][sv].vflg==1)
+			{
+				double dt = subGpsTime(&eph[ieph+1][sv].toc, grx);
+				if (dt<SECONDS_IN_HOUR)
+				{
+					ieph++;
+
+					for (int i=0; i<MAX_CHAN; i++)
+					{
+						// Generate new subframes if allocated
+						if (chan[i].prn!=0)
+							eph2sbf(&eph[ieph][chan[i].prn-1], &opt->ionoutc, chan[i].sbf);
+					}
+				}
+				break;
+			}
+		}
+
+		// Update channel allocation
+		if (!opt->staticLocationMode)
+		{
+			allocate_channel(chan, eph[ieph], opt->ionoutc, grx, opt->xyz[iumd]);
+		}
+		else
+		{
+			allocate_channel(chan, eph[ieph], opt->ionoutc, grx, opt->xyz[0]);
+		}
+
+		// Show details about simulated channels
+		if (opt->verb)
+		{
+			fprintf(stderr, "\n");
+			for (int i=0; i<MAX_CHAN; i++)
+			{
+				if (chan[i].prn>0){
+					fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn,
+						chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
+				}
+			}
+		}
+	} // end of 30s update
+	return (ieph);
+}
 
 int main(int argc, char *argv[])
 {
-	const double elvmask = 0.0; // in degree // TODO not used
+	//const double elvmask = 0.0; // in degree
 
 	////////////////////////////////////////////////////////////
 	// Read options
@@ -2297,8 +2418,6 @@ int main(int argc, char *argv[])
 	opt->umfile[0] = 0;
 
 	parse_options(argc, argv, opt);
-
-
 
 	////////////////////////////////////////////////////////////
 	// Receiver position
@@ -2347,10 +2466,10 @@ int main(int argc, char *argv[])
 		allocatedSat[sv] = -1;
 
 	// Initial reception time
-	gpstime_t grx = incGpsTime(opt->g0, 0.0);
+	gpstime_t grx = incGpsTime(&opt->g0, 0.0);
 
 	// Allocate visible satellites
-	allocate_channel(chan, eph[ieph], opt->ionoutc, &grx, opt->xyz[0], elvmask);
+	allocate_channel(chan, eph[ieph], opt->ionoutc, &grx, opt->xyz[0]); //, elvmask);
 
 	////////////////////////////////////////////////////////////
 	// Receiver antenna gain pattern
@@ -2367,116 +2486,23 @@ int main(int argc, char *argv[])
 	clock_t tstart = clock();
 	long int  timestart=timem();
 	// Update receiver time
-	grx = incGpsTime(grx, 0.1);
+	grx = incGpsTime(&grx, 0.1);
 
 	int gain[MAX_CHAN];
 
+	//=====================================
+	// big for loop - main program
+	//=====================================
 	for (int iumd=1; iumd<numd; iumd++)	// FIXME: for continous mode replace w/ while loop?
 	{
 		update_codephase(opt, eph, ant_pat, &grx, ieph, iumd, chan, gain);
 
 		update_code_carrier_phase(iq_buff_size, gain, delt,	chan,iq_buff);
 
-		//
-		// Write to stream or socket
-		//
-		if (!opt->usesocket)
-		{
-			if (opt->data_format==SC01)
-			{
-				for (int isamp=0; isamp<2*iq_buff_size; isamp++)
-				{
-					if (isamp%8==0)
-						iq8_buff[isamp/8] = 0x00;
+		output(opt, iq_buff_size, iq8_buff, iq_buff, fp);
 
-					iq8_buff[isamp/8] |= (iq_buff[isamp]>0?0x01:0x00)<<(7-isamp%8);
-				}
-
-				fwrite(iq8_buff, 1, iq_buff_size/4, fp);
-			}
-			else if (opt->data_format==SC08)
-			{
-				for (int isamp=0; isamp<2*iq_buff_size; isamp++)
-					iq8_buff[isamp] = iq_buff[isamp]>>4; // 12-bit bladeRF -> 8-bit HackRF
-
-				fwrite(iq8_buff, 1, 2*iq_buff_size, fp);
-			}
-			else if(opt->data_format==SC16)
-			{
-				fwrite(iq_buff, 2, 2*iq_buff_size, fp);
-			}
-		}
-		else
-		{
-			float *datap = calloc(iq_buff_size*2,sizeof(float));
-			for(int l=0;l<iq_buff_size*2;l++){
-				datap[l] = (float)iq_buff[l];
-			}
-			socksend(opt->sockc,datap,iq_buff_size*2*sizeof(float));
-			free(datap);
-		}
-
-		//
 		// Update navigation message and channel allocation every 30 seconds
-		//
-
-		int igrx = (int)(grx.sec*10.0+0.5);
-
-		if (igrx%300==0) // Every 30 seconds
-		{
-			// Update navigation message
-			for (int i=0; i<MAX_CHAN; i++)
-			{
-				if (chan[i].prn>0)
-					generateNavMsg(&grx, &chan[i], 0);
-			}
-
-			// Refresh ephemeris and subframes
-			// Quick and dirty fix. Need more elegant way.
-			for (int sv=0; sv<MAX_SAT; sv++)
-			{
-				if (eph[ieph+1][sv].vflg==1)
-				{
-					double dt = subGpsTime(&eph[ieph+1][sv].toc, &grx);
-					if (dt<SECONDS_IN_HOUR)
-					{
-						ieph++;
-
-						for (int i=0; i<MAX_CHAN; i++)
-						{
-							// Generate new subframes if allocated
-							if (chan[i].prn!=0) 
-								eph2sbf(eph[ieph][chan[i].prn-1], opt->ionoutc, chan[i].sbf);
-						}
-					}
-					break;
-				}
-			}
-
-			// Update channel allocation
-			if (!opt->staticLocationMode)
-			{
-				allocate_channel(chan, eph[ieph], opt->ionoutc, &grx, opt->xyz[iumd], elvmask);
-			}
-			else
-			{
-				allocate_channel(chan, eph[ieph], opt->ionoutc, &grx, opt->xyz[0], elvmask);
-			}
-
-			// Show details about simulated channels
-			if (opt->verb)
-			{
-				fprintf(stderr, "\n");
-				for (int i=0; i<MAX_CHAN; i++)
-				{
-
-					if (chan[i].prn>0){
-						fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn,
-							chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
-					}
-				}
-			}
-		} // end of 30s update
+		ieph = update_navmsg_and_channelalloc(opt,	eph, &grx, iumd, ieph, chan);
 
 		if(opt->usesocket && (subGpsTime(&grx, &opt->g0)-(float)(timem()-timestart)/1000 > 0.1)){
 			usleep(100000);
@@ -2489,7 +2515,7 @@ int main(int argc, char *argv[])
 			llh2xyz(opt->llh,opt->xyz[0]);
 		}
 		// Update receiver time
-		grx = incGpsTime(grx, 0.1);
+		grx = incGpsTime(&grx, 0.1);
 
 		// Update time counter
 		fprintf(stderr, "\rTime into run = %4.1f", subGpsTime(&grx, &opt->g0));
