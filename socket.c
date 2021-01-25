@@ -32,8 +32,8 @@ int sockinit(short port)
 void sockclose(int s){
 	close(s);
 }
-void socksend(int s,void *dataa,int siz){
-	send(s,dataa,siz,0);
+void socksend(int s,void *data,int size){
+	send(s,data,size,0);
 }
 
 long int timem(){
@@ -55,9 +55,9 @@ int udpinit(short port){
     }
     return sock;
 }
-int udprecv(int s,void *dataa,int siz){
+int udprecv(int s,void *data,int size){
 	struct sockaddr from;
-	return recvfrom(s, dataa, siz, 0,&from,0);
+	return recvfrom(s, data, size, 0,&from,0);
 }
 
 double llhr[3]={39.68,139,76};
