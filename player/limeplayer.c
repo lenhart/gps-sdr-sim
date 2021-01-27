@@ -66,7 +66,7 @@ static void print_usage(const char *progname){
             "\t" "-b <bits> or --bits <bits> select bit count in IQ sample in { 1, 8, 12, 16 }, (default: 16)" "\n"
             "\t" "-s <samplerate> or --samplerate <samplerate> configure BB sample rate (default: " STRINGIFY(TX_SAMPLERATE) ")" "\n"
             "\t" "-d <dynamic> --dynamic <dynamic> configure dynamic for the 1-bit mode (default: 2047, max 12-bit signed value supported by LimeSDR)" "\n"
-			"\t" "-v verbose"
+			"\t" "-v verbose\n"
 			"\t" "-h display this help"  "\n"
 
 			"Example:" "\n"
@@ -85,12 +85,12 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 			{"bits", required_argument, 0, 'b'},
 			{"samplerate", required_argument, 0, 's'},
 			{"dynamic", required_argument, 0, 'd'},
-			{"verbose", required_argument, 0, 'v'},
-			{"help", required_argument, 0, 'h'},
+			{"verbose", no_argument, 0, 'v'},
+			{"help", no_argument, 0, 'h'},
 			{0,         0,                 0,  0 }
 		};
 
-		int c = getopt_long(argc, argv, "g:c:a:i:s:b:d:", long_options, &option_index);
+		int c = getopt_long(argc, argv, "g:c:a:i:s:b:d:v", long_options, &option_index);
 		if (c == -1) {
 			//print_usage(argv[0]);	// always called in last round, therefore not printing info.. manual first run?
 			break;
@@ -128,6 +128,9 @@ static void parse_options(int argc, char *const argv[], params * parameters) {
 				if(parameters->dynamic > 2047){
 					parameters->dynamic = 2047;
 				}
+			break;
+			case 'v':
+				parameters->verbose = true;
 			break;
 			case 'h': // deliberate fall through
 			default:
@@ -286,7 +289,8 @@ static void print_loop_info(lms_stream_t * tx_stream) {
 		//printf("gettimeofday()=> %ld:%06ld ; ", tv.tv_sec, tv.tv_usec);
 		lms_stream_status_t status;
 		LMS_GetStreamStatus(tx_stream, &status); //Obtain TX stream stats
-		printf("TX rate:%lf MB/s" "\n", status.linkRate / 1e6);
+		printf("\rTX rate: %lf MB/s", status.linkRate / 1e6);
+		fflush(stdout);
 	}
 }
 

@@ -822,7 +822,7 @@ int replaceExpDesignator(char *const str, const int len)
 	
 	return(n);
 }
-//TODO descr
+
 double subGpsTime(const gpstime_t *const g1, const gpstime_t *const g0)
 {
 	double dt;
@@ -832,7 +832,7 @@ double subGpsTime(const gpstime_t *const g1, const gpstime_t *const g0)
 
 	return(dt);
 }
-//TODO descr
+
 gpstime_t incGpsTime(const gpstime_t *const g0, const double dt)
 {
 	gpstime_t g1;
@@ -1214,7 +1214,7 @@ int readRinexNavAll(ephem_t eph[][MAX_SAT], ionoutc_t * const ionoutc, const cha
 
 	return(ieph);
 }
-//TODO
+
 double ionosphericDelay(const ionoutc_t * const ionoutc, double g_sec,
 		const double * const llh, const double * const azel)
 {
@@ -1442,7 +1442,6 @@ int readUserMotion(double xyz[USER_MOTION_SIZE][3], const char * const filename)
 int readNmeaGGA(double xyz[USER_MOTION_SIZE][3], const char * const filename)
 {
 	FILE *fp;
-	int numd = 0;
 	char str[MAX_CHAR];
 	char *token;
 	double llh[3],pos[3];
@@ -1451,7 +1450,8 @@ int readNmeaGGA(double xyz[USER_MOTION_SIZE][3], const char * const filename)
 	if (NULL==(fp=fopen(filename,"rt")))
 		return(-1);
 
-	while (1)
+	int numd = 0; // outside loop as number is returned
+	for (; numd < USER_MOTION_SIZE; numd++)
 	{
 		if (fgets(str, MAX_CHAR, fp)==NULL)
 			break;
@@ -1506,12 +1506,6 @@ int readNmeaGGA(double xyz[USER_MOTION_SIZE][3], const char * const filename)
 			xyz[numd][0] = pos[0];
 			xyz[numd][1] = pos[1];
 			xyz[numd][2] = pos[2];
-			
-			// Update the number of track points
-			numd++;
-
-			if (numd>=USER_MOTION_SIZE)	// TODO more elegant to put into while loop condition..
-				break;
 		}
 	}
 
@@ -1520,7 +1514,6 @@ int readNmeaGGA(double xyz[USER_MOTION_SIZE][3], const char * const filename)
 	return (numd);
 }
 
-//TODO
 int generateNavMsg(const gpstime_t *const g, channel_t * const chan, const int init)
 {
 	int iwrd,isbf;
@@ -1603,7 +1596,6 @@ int generateNavMsg(const gpstime_t *const g, channel_t * const chan, const int i
 	return(1);
 }
 
-//TODO
 int checkSatVisibility(const ephem_t eph, const double g_sec, const double *const xyz,
 		const double elvMask, double *azel)
 {
@@ -1628,7 +1620,25 @@ int checkSatVisibility(const ephem_t eph, const double g_sec, const double *cons
 	return (0); // Invisible
 }
 
-//TODO
+//===================================================================
+// program step functions
+//===================================================================
+
+/*! \brief Prints channel information to stdout
+ * \param[in] chan Channel struct
+ */
+static void print_channel_info(const channel_t *const chan)
+{
+	for(int i=0; i<MAX_CHAN; i++)
+	{
+		if (chan[i].prn>0)
+		{
+			fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn,
+				chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
+		}
+	}
+}
+
 int allocate_channel(channel_t *const chan, const ephem_t *const eph, const ionoutc_t ionoutc,
 		const gpstime_t *const grx, const double *const xyz)//, const double elvMask)
 {
@@ -1706,17 +1716,14 @@ int allocate_channel(channel_t *const chan, const ephem_t *const eph, const iono
 	}
 
 	fprintf(stderr,"%3s %5s %5s %7s %9s\n" ,"prn", "azim", "elev", "pseudorange", "ionosphericDelay"); // azel 0/1 rho0 iono delay\n");
-	for(int i=0; i<MAX_CHAN; i++)
-	{
-		if (chan[i].prn>0)
-			fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn,
-				chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
-	}
+	print_channel_info(chan);
 
 	return(nsat);
 }
 
-//TODO
+/*! \brief Prints program options
+ *
+ */
 void usage(void)
 {
 	fprintf(stderr, "Usage: gps-sdr-sim [options]\n"
@@ -1739,9 +1746,7 @@ void usage(void)
 		"  -o <output>      I/Q sampling data file (default: gpssim.bin ; use - for stdout)\n"
 		"  -n <port>        Use TCP connect to Gnuradio TCP-Source for realtime simulation.\n"
 		"  -w               Connect with map server(/mapserver/mapper.py) by UDP on port 5678.\n",
-		(double)((USER_MOTION_SIZE)/10.0),(int)STATIC_MAX_DURATION);
-
-	return;
+		(double)((USER_MOTION_SIZE)/10.0), (int)STATIC_MAX_DURATION);
 }
 
 
@@ -1890,7 +1895,7 @@ static void parse_options(int argc, char *argv[], progopts * const opt)
 	}
 
 	if (opt->duration<0.0
-			|| (opt->duration>((double)USER_MOTION_SIZE)/10.0 && !opt->staticLocationMode)	// TODO this seems overly complicated. maybe use positive cases and switch in || cases?
+			|| (opt->duration>((double)USER_MOTION_SIZE)/10.0 && !opt->staticLocationMode)
 			|| ((opt->duration>STATIC_MAX_DURATION) && opt->staticLocationMode && !opt->usesocket)) // TODO remove usesocket? should be for all rt outputs..
 	{
 		fprintf(stderr, "ERROR: Invalid duration.\n");
@@ -1905,7 +1910,7 @@ static void parse_options(int argc, char *argv[], progopts * const opt)
  * \param[in] numd Number of simulation/time steps
  * \returns ieph Current set of ephemerides
  */
-static int read_ephemeris(progopts * const opt, ephem_t eph[EPHEM_ARRAY_SIZE][MAX_SAT], const int numd)
+static int read_ephemeris(progopts * const opt, ephem_t eph[EPHEM_ARRAY_SIZE][MAX_SAT])
 {
 	int neph = readRinexNavAll(eph, &opt->ionoutc, opt->navfile);
 	fprintf(stderr, "neph: max duration: %d\n", neph);
@@ -2022,7 +2027,6 @@ static int read_ephemeris(progopts * const opt, ephem_t eph[EPHEM_ARRAY_SIZE][MA
 	fprintf(stderr, "Start time = %4d/%02d/%02d,%02d:%02d:%02.0f (%d:%.0f)\n",
 			opt->t0.y, opt->t0.m, opt->t0.d, opt->t0.hh,
 			opt->t0.mm, opt->t0.sec, opt->g0.week, opt->g0.sec);
-	fprintf(stderr, "Duration = %.1f [sec]\n", ((double)numd)/10.0);
 
 	// Select the current set of ephemerides
 	int ieph = -1;
@@ -2374,14 +2378,9 @@ static int update_navmsg_and_channelalloc(const progopts * const opt,
 		if (opt->verb)
 		{
 			fprintf(stderr, "\n");
-			for (int i=0; i<MAX_CHAN; i++)
-			{
-				if (chan[i].prn>0){
-					fprintf(stderr, "%02d %6.1f %5.1f %11.1f %5.1f\n", chan[i].prn,
-						chan[i].azel[0]*R2D, chan[i].azel[1]*R2D, chan[i].rho0.d, chan[i].rho0.iono_delay);
-				}
-			}
+			print_channel_info(chan);
 		}
+
 	} // end of 30s update
 	return (ieph);
 }
@@ -2427,7 +2426,9 @@ int main(int argc, char *argv[])
 	// Read ephemeris
 	////////////////////////////////////////////////////////////
 	ephem_t eph[EPHEM_ARRAY_SIZE][MAX_SAT];
-	int ieph = read_ephemeris(opt, eph, numd);
+	int ieph = read_ephemeris(opt, eph);
+
+	fprintf(stderr, "Duration = %.1f [sec]\n", ((double)numd)/10.0);
 	////////////////////////////////////////////////////////////
 	// Baseband signal buffer and output file
 	////////////////////////////////////////////////////////////
